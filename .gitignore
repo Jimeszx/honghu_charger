@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# 输出数据（含用户隐私）
+output/data/*.db
+output/data/*.log
+output/plots/*.png
+
+# 用户配置（含 JWT Token）
+output/config.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
