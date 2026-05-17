@@ -122,6 +122,7 @@ class ChargeScheduler:
 
         iteration = 0
         charge_ended = False
+        pending_retry = False  # 等待重试状态
 
         while self._running:
             if max_iterations and iteration >= max_iterations:
@@ -133,14 +134,28 @@ class ChargeScheduler:
 
             if result.success:
                 charge_ended = False
+                pending_retry = False
             else:
                 # 区分"充电结束"和"其他错误"
                 msg = result.error_message or ""
                 if "order_list 为空" in msg or "没有正在充电" in msg:
-                    if not charge_ended:
-                        print(f"\n充电已结束（未检测到充电订单），自动停止采集。")
-                        charge_ended = True
-                    break
+                    if pending_retry:
+                        # 60秒后重试仍然失败，确认充电结束
+                        print(f"\n充电完成，自动停止采集。")
+                        # 回滚上一次失败的统计（这不是真正的采集失败）
+                        self._stats["failed"] -= 1
+                        self._stats["total"] -= 1
+                        break
+                    else:
+                        # 首次遇到 order_list 为空，等待 60 秒后重试
+                        pending_retry = True
+                        # 等待 60 秒（每秒检查中断信号）
+                        waited = 0
+                        while waited < 60 and self._running:
+                            sleep_chunk = min(1, 60 - waited)
+                            time.sleep(sleep_chunk)
+                            waited += sleep_chunk
+                        continue  # 跳过正常间隔，立即重试
                 elif "HTTP 401" in msg or "认证失败" in msg:
                     print(f"\nToken 已失效，请运行 python main.py token 重新获取。")
                     break
