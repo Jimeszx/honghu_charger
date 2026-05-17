@@ -35,7 +35,8 @@ python main.py schedule
 | `python main.py once` | 单次采集 |
 | `python main.py schedule` | 持续采集（默认 5 分钟间隔） |
 | `python main.py schedule -i 60` | 自定义采集间隔（秒） |
-| `python main.py plot` | 生成功率/电量变化曲线图 |
+| `python main.py plot` | 生成功率/电量变化曲线图（默认最新订单） |
+| `python main.py list` | 查看所有采集订单（含完整订单号） |
 | `python main.py clean` | 清理数据库、日志和图表 |
 | `python main.py status` | 查看采集状态 |
 

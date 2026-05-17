@@ -339,11 +339,15 @@ def cmd_plot(args):
     os.makedirs(PLOT_DIR, exist_ok=True)
 
     with ChargeDatabase(DB_PATH) as db:
+        # 默认绘制最新一次订单的功率曲线
+        order_id = args.order_id
+        if not order_id:
+            latest = db.get_latest_record()
+            if latest and latest.get("order_id"):
+                order_id = latest["order_id"]
+
         viz = ChargeVisualizer(db, PLOT_DIR, interactive=args.show)
-        viz.plot_power_curve(order_id=args.order_id, show=args.show)
-        sessions = db.get_sessions_summary()
-        if len(sessions) >= 2:
-            viz.plot_session_comparison(show=args.show)
+        viz.plot_power_curve(order_id=order_id, show=args.show)
 
 
 # ============================================================
@@ -378,6 +382,33 @@ def cmd_clean(args):
 # ============================================================
 # status 命令
 # ============================================================
+
+def cmd_list(args):
+    from charger.storage import ChargeDatabase
+
+    if not os.path.exists(DB_PATH):
+        print("数据库不存在，暂无采集记录。")
+        return
+
+    with ChargeDatabase(DB_PATH) as db:
+        sessions = db.get_sessions_summary()
+
+        if not sessions:
+            print("暂无采集记录。")
+            return
+
+        print("=" * 60)
+        print("采集订单列表")
+        print("=" * 60)
+        for i, s in enumerate(sessions, 1):
+            oid = s['order_id'] or '?'
+            print(f"  {i}. 订单号: {oid}")
+            print(f"     开始时间: {s.get('start_time', '?')}")
+            print(f"     峰值功率: {s['max_power']:.0f}W | 平均: {s['avg_power']:.0f}W | 谷值: {s['min_power']:.0f}W")
+            print(f"     采集点数: {s['total_records']}条")
+            print()
+        print("=" * 60)
+
 
 def cmd_status(args):
     from charger.storage import ChargeDatabase
@@ -422,13 +453,14 @@ def main():
   python main.py schedule       # 持续采集（默认5分钟间隔）
   python main.py schedule -i 60 # 自定义间隔
   python main.py plot           # 生成图表
+  python main.py list           # 查看所有采集订单
   python main.py clean          # 清理数据
   python main.py status         # 查看状态
         """
     )
     parser.add_argument(
         "command",
-        choices=["token", "verify", "once", "schedule", "plot", "clean", "status"],
+        choices=["token", "verify", "once", "schedule", "plot", "clean", "status", "list"],
     )
     parser.add_argument(
         "--config", "-c",
@@ -478,7 +510,7 @@ def main():
 
     setup_logging()
 
-    commands = {"once": cmd_once, "schedule": cmd_schedule, "plot": cmd_plot, "status": cmd_status}
+    commands = {"once": cmd_once, "schedule": cmd_schedule, "plot": cmd_plot, "status": cmd_status, "list": cmd_list}
     cmd_func = commands.get(args.command)
     if cmd_func:
         cmd_func(args)

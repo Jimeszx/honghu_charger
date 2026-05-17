@@ -195,11 +195,13 @@ class ChargeVisualizer:
         # 标记最大值和最小值
         if powers:
             max_power = max(powers)
-            min_power = min(powers)
+            # 谷值排除 0 值（充电未开始或数据异常）
+            valid_powers = [p for p in powers if p > 0]
+            min_power = min(valid_powers) if valid_powers else 0
             avg_power = sum(powers) / len(powers)
 
             max_idx = powers.index(max_power)
-            min_idx = powers.index(min_power)
+            min_idx = powers.index(min_power) if min_power in powers else 0
 
             ax1.scatter([timestamps[max_idx]], [max_power], color="#F44336", s=80, zorder=5, label=f"峰值: {max_power:.0f}W")
             ax1.scatter([timestamps[min_idx]], [min_power], color="#4CAF50", s=80, zorder=5, label=f"谷值: {min_power:.0f}W")
@@ -255,9 +257,7 @@ class ChargeVisualizer:
 
         # 保存图表
         if not output_filename:
-            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-            order_suffix = f"_{order_id}" if order_id else ""
-            output_filename = f"power_curve{order_suffix}_{timestamp_str}.png"
+            output_filename = f"power_curve_{datetime.now().strftime('%Y%m%d')}.png"
 
         output_path = str(Path(self.output_dir) / output_filename)
         plt.savefig(output_path, dpi=330, bbox_inches="tight")
